@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scholarship Match Finder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: profile form on the left (sticky), ranked scholarships on the right as cards or a table; one column on phones. */
+:root{
+  --bg:#F2F6F5; --surface:#FFFFFF; --ink:#11261F; --muted:#586B65; --line:#D5DFDC;
+  --accent:#0B6B5C; --accent-ink:#FFFFFF; --accent-soft:#DDEFEA;
+  --gold:#B67A07; --good:#17794A; --bad:#B23A2E; --warn:#9A6A00;
+  --display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0D1614; --surface:#15221F; --ink:#E8F0EE; --muted:#9BB0AA; --line:#2A3B37;
+    --accent:#3FBFA6; --accent-ink:#06211C; --accent-soft:#17332D;
+    --gold:#E8B24A; --good:#5FD09A; --bad:#F08C80; --warn:#E8B24A;
+ }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0D1614; --surface:#15221F; --ink:#E8F0EE; --muted:#9BB0AA; --line:#2A3B37;
+  --accent:#3FBFA6; --accent-ink:#06211C; --accent-soft:#17332D;
+  --gold:#E8B24A; --good:#5FD09A; --bad:#F08C80; --warn:#E8B24A;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
+a{color:var(--accent)}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+[hidden]{display:none !important}
+
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  padding:16px 20px;border-bottom:1px solid var(--line);background:var(--surface)}
+.brand{font-family:var(--display);font-weight:700;font-size:20px;display:flex;align-items:center;gap:10px}
+.brand svg{flex:none}
+.top nav{display:flex;gap:18px;font-size:14px}
+.top nav a{color:var(--muted);text-decoration:none}
+.top nav a:hover{color:var(--ink)}
+
+.intro{padding:28px 20px 8px;max-width:1240px;margin:0 auto}
+.intro h1{font-family:var(--display);font-weight:700;font-size:clamp(26px,4.5vw,40px);line-height:1.1;margin:0 0 8px;text-wrap:balance}
+.intro p{margin:0;color:var(--muted);max-width:62ch}
+
+.wrap{max-width:1240px;margin:0 auto;padding:20px;display:grid;grid-template-columns:330px minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:900px){.wrap{grid-template-columns:minmax(0,1fr)}}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px}
+.profile{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto;padding-bottom:0}
+@media (max-width:900px){.profile{position:static}}
+.panel h2{font-family:var(--display);font-size:19px;margin:0 0 4px}
+.panel .hint{font-size:13px;color:var(--muted);margin:0 0 14px}
+form{display:grid;gap:12px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:grid;gap:4px;font-size:13px;font-weight:600}
+input,select{font:inherit;font-size:15px;color:var(--ink);background:var(--bg);border:1px solid var(--line);
+  border-radius:8px;padding:9px 10px;width:100%;min-width:0}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:12px 10px}
+.check{display:flex;align-items:center;gap:8px;font-weight:500;grid-column:1/-1}
+.check input{width:18px;height:18px;flex:none}
+.btn{font:inherit;font-weight:600;border:0;border-radius:8px;padding:11px 14px;cursor:pointer;
+  background:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--line)}
+.btn.small{padding:6px 12px;font-size:14px}
+.btn.on{background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent)}
+.formfoot{position:sticky;bottom:0;display:grid;gap:8px;background:var(--surface);padding:12px 0 18px;margin-top:4px;border-top:1px solid var(--line)}
+.actions{display:flex;gap:8px}
+.actions .btn{flex:1;white-space:nowrap}
+.actions .btn[type=submit]{flex:2}
+.dirty{margin:0;font-size:13px;font-weight:600;color:var(--warn);border:1px solid var(--warn);border-radius:8px;padding:8px 10px}
+
+.bar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--surface)}
+.seg button{font:inherit;font-size:14px;font-weight:600;border:0;background:transparent;color:var(--muted);padding:8px 14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+
+.summary{background:var(--accent-soft);border-radius:10px;padding:10px 14px;font-size:14px;margin:0 0 12px}
+.summary b{font-weight:600}
+.tools{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:10px}
+.tools input{grid-column:1/-1}
+@media (max-width:640px){.tools{grid-template-columns:1fr 1fr}}
+.status{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:14px;color:var(--muted);margin:0 0 12px;align-items:center}
+.badge-example{background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:2px 10px;font-weight:600;font-size:12px}
+
+.list{display:grid;gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;
+  display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px}
+.card.out{opacity:.66}
+.ring{--p:0;width:64px;height:64px;border-radius:50%;display:grid;place-items:center;
+  background:conic-gradient(var(--ring,var(--accent)) calc(var(--p)*1%),var(--line) 0)}
+.ring span{width:50px;height:50px;border-radius:50%;background:var(--surface);display:grid;place-items:center;
+  font-family:var(--display);font-weight:700;font-size:18px;font-variant-numeric:tabular-nums}
+.verdict{font-size:11px;font-weight:600;text-align:center;margin-top:6px;max-width:64px;line-height:1.2}
+.card h3{font-family:var(--display);font-size:18px;line-height:1.25;margin:0 0 2px}
+.meta{font-size:13px;color:var(--muted);margin:0 0 8px}
+.facts{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;margin:0 0 10px;padding:0;list-style:none;align-items:center}
+.facts b{font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px;padding:0;list-style:none}
+.chip,.pill{font-size:12px;font-weight:500;border-radius:999px;padding:3px 9px;border:1px solid var(--line);white-space:nowrap}
+.chip{white-space:normal}
+.ok{color:var(--good);border-color:var(--good)}
+.no{color:var(--bad);border-color:var(--bad)}
+.mid{color:var(--warn);border-color:var(--warn)}
+.later{color:var(--muted)}
+.cardacts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.cardacts select{width:auto;padding:6px 8px;font-size:14px}
+.cardacts a{font-size:14px;font-weight:600;text-decoration:none}
+.empty{padding:28px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:12px}
+.more{display:block;margin:14px auto 0}
+
+.tablewrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;min-width:820px;font-size:14px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+th{font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap}
+th button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+th button:hover{color:var(--ink)}
+td.num{font-variant-numeric:tabular-nums;font-weight:600}
+.linkbtn{font:inherit;font-weight:600;color:var(--accent);background:none;border:0;padding:0;cursor:pointer;text-align:left}
+tr.out td{color:var(--muted)}
+
+dialog{width:min(660px,calc(100% - 32px));max-height:calc(100% - 32px);padding:0;border:1px solid var(--line);
+  border-radius:14px;background:var(--surface);color:var(--ink)}
+dialog::backdrop{background:rgba(6,20,17,.55)}
+.dhead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:18px 18px 0}
+.dhead h2{font-family:var(--display);font-size:22px;line-height:1.2;margin:0}
+.dbody{padding:8px 18px 20px;display:grid;gap:14px}
+.dbody h3{font-family:var(--display);font-size:16px;margin:0 0 6px}
+.dbody ul,.dbody ol{margin:0;padding-left:20px;font-size:14px}
+.docs{list-style:none;padding:0 !important;display:grid;gap:6px}
+.docs label{display:flex;gap:8px;align-items:center;font-weight:500;font-size:14px}
+.docs input{width:18px;height:18px;flex:none}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:560px){.grid2{grid-template-columns:1fr}}
+
+footer{max-width:1240px;margin:0 auto;padding:8px 20px 32px;font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="11.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M13 4l3 9-3 9-3-9z" fill="var(--accent)"/></svg>
+    Scholarship Match Finder
+  </div>
+  <nav aria-label="Main"><a href="#finder">Find scholarships</a><a href="#about">How matching works</a></nav>
+</header>
+
+<section class="intro">
+  <h1>Find the scholarships that fit your profile</h1>
+  <p><span id="total"></span> scholarships in <span id="totalCountries"></span> host countries. Choose your country, enter your results and press Find my matches to see which ones accept you and how well you fit.</p>
+</section>
+
+<main class="wrap" id="finder">
+  <aside class="panel profile">
+    <h2>Your profile</h2>
+    <p class="hint">Nothing is uploaded. Matching runs in your browser.</p>
+    <form id="profileForm">
+      <label for="pNation">Your country (nationality)
+        <select id="pNation"></select>
+      </label>
+      <label for="pLevel">Degree you want to study
+        <select id="pLevel">
+          <option value="bachelor">Bachelor's</option>
+          <option value="master" selected>Master's</option>
+          <option value="phd">PhD</option>
+        </select>
+      </label>
+      <label for="pField">Field of study
+        <select id="pField"></select>
+      </label>
+      <div class="fields">
+        <label for="pSsc" data-for="bachelor">SSC GPA (out of 5)
+          <input id="pSsc" type="number" min="0" max="5" step="0.01" value="5.00" inputmode="decimal">
+        </label>
+        <label for="pHsc" data-for="bachelor">HSC GPA (out of 5)
+          <input id="pHsc" type="number" min="0" max="5" step="0.01" value="4.80" inputmode="decimal">
+        </label>
+        <label for="pCgpa" data-for="master phd">Bachelor's CGPA (out of 4)
+          <input id="pCgpa" type="number" min="0" max="4" step="0.01" value="3.50" inputmode="decimal">
+        </label>
+        <label for="pMcgpa" data-for="phd">Master's CGPA (out of 4)
+          <input id="pMcgpa" type="number" min="0" max="4" step="0.01" value="3.60" inputmode="decimal">
+        </label>
+        <label for="pIelts">IELTS score
+          <select id="pIelts">
+            <option value="0">Not taken</option>
+            <option>5.5</option><option>6.0</option><option selected>6.5</option>
+            <option>7.0</option><option>7.5</option><option>8.0</option>
+          </select>
+        </label>
+        <label for="pWork" data-for="master phd">Work experience (years)
+          <input id="pWork" type="number" min="0" max="30" step="1" value="1" inputmode="numeric">
+        </label>
+        <label for="pPubs" data-for="master phd">Publications
+          <input id="pPubs" type="number" min="0" max="50" step="1" value="1" inputmode="numeric">
+        </label>
+        <label class="check" for="pProposal" data-for="phd"><input id="pProposal" type="checkbox"> I have a research proposal</label>
+        <label class="check" for="pSupervisor" data-for="phd"><input id="pSupervisor" type="checkbox"> A supervisor has agreed to take me</label>
+      </div>
+      <div class="formfoot">
+      <p class="dirty" id="dirtyNote" role="status" hidden>Profile changed. Press Find my matches to update.</p>
+      <div class="actions">
+        <button class="btn" type="submit">Find my matches</button>
+        <button class="btn ghost" type="button" id="resetBtn">Reset</button>
+      </div>
+      </div>
+    </form>
+  </aside>
+
+  <section aria-label="Scholarships" id="results">
+    <div class="bar">
+      <div class="seg" role="group" aria-label="Section">
+        <button type="button" id="tabAll" aria-pressed="true">All scholarships</button>
+        <button type="button" id="tabTrack" aria-pressed="false">My tracker (<span id="trackCount">0</span>)</button>
+      </div>
+      <div class="seg" role="group" aria-label="View">
+        <button type="button" id="viewCards" aria-pressed="true">Cards</button>
+        <button type="button" id="viewTable" aria-pressed="false">Table</button>
+      </div>
+    </div>
+    <p class="summary" id="summary" aria-live="polite"></p>
+    <div class="tools">
+      <input id="q" type="search" placeholder="Search by name, country or provider" aria-label="Search by name, country or provider">
+      <select id="fElig" aria-label="Eligibility">
+        <option value="">Eligible and not eligible</option>
+        <option value="eligible">Only ones I am eligible for</option>
+        <option value="nation">Only ones open to my country</option>
+        <option value="linked">Only ones with a verified official link</option>
+      </select>
+      <select id="fRegion" aria-label="Region"><option value="">All regions</option></select>
+      <select id="fCountry" aria-label="Host country"><option value="">All host countries</option></select>
+      <select id="fFunding" aria-label="Funding">
+        <option value="">Any funding</option><option value="full">Fully funded</option><option value="partial">Partially funded</option>
+      </select>
+      <select id="fStatus" aria-label="Application status">
+        <option value="">Any status</option><option value="open">Open now</option><option value="later">Opens later</option>
+      </select>
+      <select id="sortBy" aria-label="Sort by">
+        <option value="match">Sort: best match</option>
+        <option value="deadline">Sort: nearest deadline</option>
+        <option value="name">Sort: name</option>
+        <option value="country">Sort: host country</option>
+      </select>
+    </div>
+    <p class="status"><span id="count" aria-live="polite"></span><span class="badge-example" id="exampleTag">Example profile</span></p>
+    <div class="list" id="list"></div>
+    <div class="tablewrap" id="tableWrap" hidden></div>
+    <button type="button" class="btn ghost more" id="moreBtn" hidden></button>
+  </section>
+</main>
+
+<dialog id="detail" aria-labelledby="dTitle">
+  <div class="dhead"><h2 id="dTitle"></h2><button class="btn ghost small" type="button" id="dClose">Close</button></div>
+  <div class="dbody" id="dBody"></div>
+</dialog>
+
+<footer id="about">
+  <p><strong>How matching works.</strong> Nationality and degree level decide eligibility. Bachelor's applicants are scored on HSC GPA (30), field (25), English (25) and SSC GPA (20). Master's applicants on field (25), Bachelor's CGPA (25), English (20), work experience (15) and research record (15). PhD applicants on Master's CGPA (20), publications (20), field (15), English (15), Bachelor's CGPA (10), research proposal (10) and supervisor (10). A missed compulsory requirement caps the score at 49.</p>
+  <p><strong>Best match order.</strong> The list is sorted by match score, highest first. When scores are equal, the more competitive scholarship comes first, then the nearer deadline. Scholarships you are not eligible for are always at the end.</p>
+  <p><strong>Check before you rely on it.</strong> The scholarships are real programmes, but eligible countries, months, and the SSC, HSC, CGPA, IELTS and publication levels on this page are indicative values that have not been checked against the official websites. Programmes change every year. Verify each entry before you publish. Saved scholarships and ticked documents stay in this browser only.</p>
+  <p><strong>Official links.</strong> <span id="linkCount"></span> scholarships have a "Go to official page" button. Each of those addresses was checked on 17 November 2026. The others show "Official link not verified yet" until their link is confirmed.</p>
+</footer>
+
+<script>
+/* ================= 1. DATA ================= */
+const FIELDS = ["Statistics & Data Science","Computer Science & AI","Engineering","Business & Economics",
+  "Health & Life Sciences","Social Sciences","Agriculture & Environment","Arts & Humanities"];
+const FK = {ST:FIELDS[0],CS:FIELDS[1],EN:FIELDS[2],BU:FIELDS[3],HE:FIELDS[4],SO:FIELDS[5],AG:FIELDS[6],AR:FIELDS[7]};
+const STEM = ["ST","CS","EN","HE","AG"];
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+const SA = ["Bangladesh","India","Pakistan","Nepal","Sri Lanka","Bhutan","Maldives","Afghanistan"];
+const ASEAN = ["Indonesia","Vietnam","Philippines","Thailand","Malaysia","Myanmar","Cambodia"];
+const AFR = ["Nigeria","Ghana","Kenya","Ethiopia","Uganda","Tanzania","Rwanda","Egypt","South Africa"];
+const NATIONS = [...SA, ...ASEAN, ...AFR, "China","Brazil","Mexico"].sort();
+const CW = ["Bangladesh","India","Pakistan","Sri Lanka","Maldives","Malaysia","Nigeria","Ghana","Kenya","Uganda","Tanzania","Rwanda","South Africa"];
+const OIC = ["Bangladesh","Pakistan","Afghanistan","Maldives","Indonesia","Malaysia","Nigeria","Uganda","Egypt"];
+const GROUPS = {
+  all:{label:"Students of all nationalities", list:null},
+  dev:{label:"Students from developing and emerging countries", list:null},
+  cw:{label:"Citizens of Commonwealth countries", list:CW},
+  sa:{label:"Citizens of South Asian (SAARC) countries", list:SA},
+  asean:{label:"Citizens of ASEAN countries", list:ASEAN},
+  africa:{label:"Citizens of African countries", list:AFR},
+  asia:{label:"Citizens of Asian countries", list:[...SA, ...ASEAN, "China"]},
+  adb:{label:"Citizens of ADB developing member countries", list:[...SA, ...ASEAN, "China"]},
+  oic:{label:"Citizens of IsDB member countries and Muslim communities elsewhere", list:[...OIC,"India","Sri Lanka","Nepal","Kenya","Tanzania","Ethiopia","Philippines","Thailand"]}
+};
+const notIndia = NATIONS.filter(n => n !== "India");
+
+/* S(name, provider, host country, region, levels B/M/P, funding F/P, open to, tier 1-3, deadline month, options)
+   options: w = work years, r = research record valued (0/1), e:0 = no IELTS minimum, f = priority fields,
+            n = note, u = official URL, o = opening month */
+const LV = {B:"bachelor", M:"master", P:"phd"};
+function S(name, provider, country, region, lv, fund, to, tier, deadline, o = {}){
+  return { name, provider, country, region, tier, levels:[...lv].map(c => LV[c]), funding:fund === "F" ? "full" : "partial", openTo:to,
+    minCgpa:[0,3.6,3.3,3.0][tier], ielts:o.e === 0 ? null : [0,7.0,6.5,6.0][tier], workYears:o.w || 0,
+    research:o.r !== undefined ? !!o.r : (lv === "P" || lv === "MP"),
+    fields:o.f ? o.f.map(k => FK[k]) : ["any"], opens:o.o || ((deadline + 8) % 12) + 1, deadline, note:o.n || "", url:o.u || ""};
+}
+const UK = ["United Kingdom","Europe"], US = ["United States","North America"], CA = ["Canada","North America"],
+  AU = ["Australia","Oceania"], NZ = ["New Zealand","Oceania"], GL = ["Multiple countries","Global"];
+const E = (c) => [c,"Europe"], A = (c) => [c,"Asia"], ME = (c) => [c,"Middle East"];
+
+const SCHOLARSHIPS = [
+  /* ---- United Kingdom and Ireland ---- */
+  S("Chevening Scholarships","UK Government",...UK,"M","F","all",2,11,{w:2}),
+  S("Commonwealth Master's Scholarships","Commonwealth Scholarship Commission",...UK,"M","F","cw",1,10),
+  S("Commonwealth PhD Scholarships","Commonwealth Scholarship Commission",...UK,"P","F","cw",1,10),
+  S("Commonwealth Shared Scholarships","Commonwealth Scholarship Commission",...UK,"M","F","cw",2,12),
+  S("Commonwealth Distance Learning Scholarships","Commonwealth Scholarship Commission",...UK,"M","P","cw",3,3,{n:"Study online from your home country"}),
+  S("Queen Elizabeth Commonwealth Scholarships","Association of Commonwealth Universities",...GL,"M","F","cw",2,1,{n:"Study in another low or middle income Commonwealth country"}),
+  S("Gates Cambridge Scholarship","Gates Cambridge Trust",...UK,"MP","F","all",1,12),
+  S("Rhodes Scholarship","Rhodes Trust",...UK,"MP","F","all",1,8,{n:"Age limits apply"}),
+  S("Clarendon Fund Scholarships","University of Oxford",...UK,"MP","F","all",1,1),
+  S("Weidenfeld-Hoffmann Scholarships","University of Oxford",...UK,"M","F","dev",1,1),
+  S("Reach Oxford Scholarship","University of Oxford",...UK,"B","F","dev",1,2),
+  S("Oxford Pershing Square Scholarship","University of Oxford",...UK,"M","F","all",1,1,{f:["BU"],n:"For the 1+1 MBA programme"}),
+  S("Skoll Scholarship","Saïd Business School, Oxford",...UK,"M","F","all",1,1,{f:["BU"],w:3,n:"For social entrepreneurs on the Oxford MBA"}),
+  S("Cambridge Trust Scholarships","Cambridge Trust",...UK,"BMP","F","all",1,12),
+  S("Jardine Scholarship","Jardine Foundation",...UK,"M","F",[...ASEAN,"China"],1,10,{n:"Selected Oxford and Cambridge colleges"}),
+  S("Felix Scholarships","Felix Trust",...UK,"MP","F","dev",1,1,{n:"Oxford, Reading and SOAS"}),
+  S("GREAT Scholarships","British Council",...UK,"M","P",["Bangladesh","India","Pakistan","Indonesia","Vietnam","Thailand","Malaysia","Nigeria","Ghana","Kenya","Egypt","China","Mexico"],2,5),
+  S("British Council Scholarships for Women in STEM","British Council",...UK,"M","F",["Bangladesh","India","Pakistan","Nepal","Sri Lanka","Indonesia","Vietnam","Philippines","Thailand","Malaysia","Myanmar","Cambodia","Brazil","Mexico","Egypt"],2,4,{f:STEM,n:"Women only"}),
+  S("Scotland's Saltire Scholarships","Scottish Government",...UK,"M","P",["India","Pakistan","China"],2,5),
+  S("Imperial College President's PhD Scholarships","Imperial College London",...UK,"P","F","all",1,1),
+  S("UCL Global Masters Scholarship","University College London",...UK,"M","P","all",2,4),
+  S("Bristol Think Big Scholarships","University of Bristol",...UK,"BM","P","all",2,4),
+  S("Warwick Chancellor's International Scholarship","University of Warwick",...UK,"P","F","all",1,1),
+  S("Developing Solutions Masters Scholarship","University of Nottingham",...UK,"M","P","cw",2,5),
+  S("Manchester Global Futures Scholarship","University of Manchester",...UK,"BM","P",["Bangladesh","India","Pakistan","Sri Lanka","Indonesia","Vietnam","Thailand","Malaysia","Nigeria","Ghana","Kenya","Egypt","Uganda","Tanzania"],2,5),
+  S("Equity and Merit Scholarships","University of Manchester",...UK,"M","F",["Ethiopia","Rwanda","Tanzania","Uganda"],2,10,{w:2}),
+  S("LSE Graduate Support Scheme","London School of Economics",...UK,"M","P","all",1,4),
+  S("Glasgow Global Leadership Scholarship","University of Glasgow",...UK,"M","P","all",2,5),
+  S("Government of Ireland International Education Scholarship","Higher Education Authority",...E("Ireland"),"MP","F","all",1,3),
+  S("Ireland Fellows Programme","Irish Aid",...E("Ireland"),"M","F",["Kenya","Ethiopia","Uganda","Tanzania","Rwanda","Nigeria","Ghana","South Africa","Vietnam","Cambodia"],2,7,{w:2}),
+  S("Trinity Global Excellence Scholarships","Trinity College Dublin",...E("Ireland"),"BM","P","all",2,3),
+  S("UCD Global Excellence Scholarship","University College Dublin",...E("Ireland"),"BM","P","all",2,3),
+
+  /* ---- United States ---- */
+  S("Fulbright Foreign Student Program","US Government",...US,"MP","F","all",2,5),
+  S("Hubert H. Humphrey Fellowship","US Government",...US,"M","F","dev",2,6,{w:5,r:0,n:"Non-degree year for mid-career professionals"}),
+  S("Knight-Hennessy Scholars","Stanford University",...US,"MP","F","all",1,10),
+  S("AAUW International Fellowships","American Association of University Women",...US,"MP","P","all",2,11,{n:"Women only"}),
+  S("East-West Center Graduate Degree Fellowship","East-West Center, Hawaii",...US,"MP","F","asia",2,12),
+  S("Clark Global Scholars Program","Clark University",...US,"B","P","all",2,1),
+  S("AU Emerging Global Leader Scholarship","American University",...US,"B","F","all",1,12),
+  S("Boston University Trustee Scholarship","Boston University",...US,"B","P","all",1,12),
+  S("Harvard College Financial Aid","Harvard University",...US,"B","F","all",1,1,{n:"Need-based, after admission"}),
+  S("Yale University Financial Aid","Yale University",...US,"B","F","all",1,1,{n:"Need-based, after admission"}),
+  S("MIT Financial Aid","Massachusetts Institute of Technology",...US,"B","F","all",1,1,{n:"Need-based, after admission"}),
+  S("Princeton University Financial Aid","Princeton University",...US,"B","F","all",1,1,{n:"Need-based, after admission"}),
+  S("Amherst College Financial Aid","Amherst College",...US,"B","F","all",1,1,{n:"Need-based, after admission"}),
+  S("Karsh International Scholarship","Duke University",...US,"B","F","all",1,1),
+  S("P.E.O. International Peace Scholarship","P.E.O. Sisterhood",...US,"MP","P","all",2,12,{n:"Women only, study in the US or Canada"}),
+  S("Margaret McNamara Education Grants","MMEG",...US,"BMP","P","dev",3,1,{n:"Women aged 25 or older"}),
+  S("Fulbright-Nehru Master's Fellowships","USIEF",...US,"M","F",["India"],2,5,{w:3}),
+  S("Tata Scholarship","Cornell University",...US,"B","F",["India"],1,1),
+
+  /* ---- Global programmes ---- */
+  S("Joint Japan/World Bank Graduate Scholarship","World Bank",...GL,"M","F","dev",2,5,{w:3,f:["BU","SO","HE","AG","EN"]}),
+  S("Rotary Peace Fellowship","Rotary Foundation",...GL,"M","F","all",2,5,{w:3,f:["SO","AR","BU"]}),
+  S("Mastercard Foundation Scholars Program","Mastercard Foundation",...GL,"BM","F","africa",2,12),
+  S("ADB-Japan Scholarship Program","Asian Development Bank",...GL,"M","F","adb",2,5,{w:2,f:["BU","EN","AG","ST","SO","HE"]}),
+  S("Aga Khan Foundation International Scholarship","Aga Khan Foundation",...GL,"MP","P",["Bangladesh","India","Pakistan","Afghanistan","Kenya","Tanzania","Uganda","Egypt"],1,3,{n:"Half grant, half loan"}),
+  S("IsDB Scholarship Programme","Islamic Development Bank",...GL,"BMP","F","oic",2,4,{f:STEM}),
+  S("Inlaks Shivdasani Scholarships","Inlaks Shivdasani Foundation",...GL,"M","F",["India"],1,3),
+  S("WMI Empowerment Through Education","Wells Mountain Initiative",...GL,"B","P","dev",3,3,{n:"Study in your home country or region"}),
+  S("Schlumberger Faculty for the Future","Schlumberger Foundation",...GL,"P","F","dev",1,11,{f:STEM,n:"Women only"}),
+  S("OWSD PhD Fellowship","Organization for Women in Science for the Developing World",...GL,"P","F",["Bangladesh","Nepal","Bhutan","Afghanistan","Sri Lanka","Myanmar","Cambodia","Ethiopia","Uganda","Tanzania","Rwanda","Kenya","Ghana","Nigeria"],2,5,{f:STEM,n:"Women only, study in another developing country"}),
+  S("TWAS PhD Fellowships","The World Academy of Sciences",...GL,"P","F","dev",2,6,{f:STEM,n:"Study in another developing country"}),
+  S("Google PhD Fellowship","Google",...GL,"P","P","all",1,5,{f:["CS","ST"],n:"For students already enrolled in a PhD"}),
+  S("Zonta Amelia Earhart Fellowship","Zonta International",...GL,"P","P","all",1,11,{f:["EN"],n:"Women in aerospace engineering and space sciences"}),
+
+  /* ---- Canada ---- */
+  S("Lester B. Pearson International Scholarship","University of Toronto",...CA,"B","F","all",1,1),
+  S("Pierre Elliott Trudeau Foundation Doctoral Scholarship","Trudeau Foundation",...CA,"P","F","all",1,1,{f:["SO","AR"]}),
+  S("UBC International Scholars Program (Karen McKellin Leader of Tomorrow Award)","University of British Columbia",...CA,"B","F","all",1,12,{n:"Need and merit based"}),
+  S("McCall MacBain Scholarships","McGill University",...CA,"M","F","all",1,8),
+  S("York Global Leader of Tomorrow Scholarship","York University",...CA,"B","P","all",2,2),
+  S("University of Manitoba Graduate Fellowship","University of Manitoba",...CA,"MP","P","all",2,3),
+  S("Ontario Graduate Scholarship","Province of Ontario",...CA,"MP","P","all",2,2),
+  S("University of Saskatchewan Dean's Scholarship","University of Saskatchewan",...CA,"MP","F","all",2,2),
+  S("Killam Predoctoral Scholarship","Dalhousie University",...CA,"MP","F","all",1,1),
+  S("UBC Four Year Doctoral Fellowship","University of British Columbia",...CA,"P","F","all",1,1),
+  S("Connaught International Scholarship","University of Toronto",...CA,"P","P","all",1,1),
+  S("International Master's and Doctoral Awards","University of Waterloo",...CA,"MP","P","all",2,2),
+
+  /* ---- Australia and New Zealand ---- */
+  S("Australia Awards Scholarships","Australian Government",...AU,"M","F",["Bangladesh","Nepal","Pakistan","Sri Lanka","Bhutan","Maldives","Indonesia","Vietnam","Philippines","Myanmar","Cambodia"],2,4,{w:2,f:["BU","HE","AG","SO","EN"]}),
+  S("Research Training Program Scholarship","Australian Government",...AU,"MP","F","all",1,9,{r:1,n:"Research degrees, applied for through universities"}),
+  S("Melbourne Graduate Research Scholarships","University of Melbourne",...AU,"MP","F","all",1,10,{r:1}),
+  S("University of Sydney International Scholarship","University of Sydney",...AU,"P","F","all",1,9),
+  S("Monash International Leadership Scholarship","Monash University",...AU,"BM","P","all",1,10),
+  S("Adelaide Scholarships International","University of Adelaide",...AU,"MP","F","all",1,8,{r:1}),
+  S("ANU Chancellor's International Scholarship","Australian National University",...AU,"BM","P","all",1,10),
+  S("Deakin Vice-Chancellor's International Scholarship","Deakin University",...AU,"BM","P","all",1,11),
+  S("Macquarie Vice-Chancellor's International Scholarship","Macquarie University",...AU,"BM","P","all",2,11),
+  S("Manaaki New Zealand Scholarships","New Zealand Government",...NZ,"BMP","F",["Bangladesh","Nepal","Sri Lanka","Bhutan","Maldives",...ASEAN,"Kenya","Ghana","Nigeria","Ethiopia","Tanzania","Uganda","Rwanda"],2,2,{f:["AG","HE","SO","EN","BU"]}),
+  S("International Student Excellence Scholarship","University of Auckland",...NZ,"BM","P","all",2,4),
+  S("University of Otago Doctoral Scholarship","University of Otago",...NZ,"P","F","all",1,6),
+  S("Wellington Doctoral Scholarship","Victoria University of Wellington",...NZ,"P","F","all",1,7),
+
+  /* ---- Germany, Austria and EU-wide ---- */
+  S("DAAD EPOS Development-Related Postgraduate Courses","DAAD",...E("Germany"),"MP","F","dev",3,10,{w:2,r:0,f:["BU","EN","AG","HE","SO"]}),
+  S("DAAD Research Grants for Doctoral Programmes","DAAD",...E("Germany"),"P","F","all",2,10),
+  S("DAAD Helmut-Schmidt Programme","DAAD",...E("Germany"),"M","F","dev",2,7,{f:["SO","BU"]}),
+  S("Heinrich Böll Foundation Scholarships","Heinrich Böll Foundation",...E("Germany"),"MP","F","all",2,9),
+  S("Konrad-Adenauer-Stiftung Scholarships","Konrad-Adenauer-Stiftung",...E("Germany"),"MP","F","all",2,7),
+  S("Friedrich Ebert Foundation Scholarships","Friedrich-Ebert-Stiftung",...E("Germany"),"BMP","F","dev",2,4),
+  S("Friedrich Naumann Foundation Scholarships","Friedrich Naumann Foundation",...E("Germany"),"MP","F","all",2,4),
+  S("Hanns Seidel Foundation Scholarships","Hanns Seidel Foundation",...E("Germany"),"MP","F","all",2,7),
+  S("Rosa Luxemburg Foundation Scholarships","Rosa-Luxemburg-Stiftung",...E("Germany"),"MP","F","all",2,10),
+  S("KAAD Scholarships","Catholic Academic Exchange Service",...E("Germany"),"MP","F","dev",2,6),
+  S("Deutschlandstipendium","German Government and universities",...E("Germany"),"BM","P","all",2,7),
+  S("International Max Planck Research Schools","Max Planck Society",...E("Germany"),"P","F","all",1,12,{f:STEM}),
+  S("Erasmus Mundus Joint Masters","European Union",...E("European Union"),"M","F","all",2,1),
+  S("Marie Skłodowska-Curie Doctoral Networks","European Union",...E("European Union"),"P","F","all",2,3),
+  S("CEU Master's and Doctoral Scholarships","Central European University",...E("Austria"),"MP","F","all",2,2,{f:["SO","AR","BU","ST"]}),
+  S("Ernst Mach Grant","OeAD",...E("Austria"),"P","F","all",2,2),
+
+  /* ---- France ---- */
+  S("Eiffel Excellence Scholarship","French Government",...E("France"),"MP","F","all",1,1),
+  S("Émile Boutmy Scholarship","Sciences Po",...E("France"),"BM","P","all",1,1,{f:["SO","BU","AR"]}),
+  S("Paris-Saclay International Master's Scholarships","Université Paris-Saclay",...E("France"),"M","F","all",1,4),
+  S("ENS International Selection","École Normale Supérieure",...E("France"),"M","F","all",1,11),
+  S("Ampère Excellence Scholarships","ENS de Lyon",...E("France"),"M","F","all",1,1),
+  S("Charpak Master's Scholarship","French Embassy in India",...E("France"),"M","F",["India"],2,3),
+  S("INSEAD MBA Scholarships","INSEAD",...E("France"),"M","P","all",1,6,{w:3,f:["BU"]}),
+  S("HEC Paris Excellence Scholarships","HEC Paris",...E("France"),"M","P","all",1,4,{f:["BU"]}),
+
+  /* ---- Netherlands and Belgium ---- */
+  S("NL Scholarship","Dutch Government and universities",...E("Netherlands"),"BM","P","all",2,3),
+  S("Leiden University Excellence Scholarship","Leiden University",...E("Netherlands"),"M","P","all",1,2),
+  S("Amsterdam Merit Scholarship","University of Amsterdam",...E("Netherlands"),"M","F","all",1,1),
+  S("Radboud Scholarship Programme","Radboud University",...E("Netherlands"),"M","P","all",1,2),
+  S("University of Twente Scholarship","University of Twente",...E("Netherlands"),"M","P","all",1,5),
+  S("Justus & Louise van Effen Excellence Scholarships","TU Delft",...E("Netherlands"),"M","F","all",1,12,{f:["EN","CS","ST"]}),
+  S("Maastricht NL-High Potential Scholarship","Maastricht University",...E("Netherlands"),"M","F","all",1,2),
+  S("Erik Bleumink Fund","University of Groningen",...E("Netherlands"),"M","F","dev",1,12),
+  S("Africa Scholarship Programme","Wageningen University",...E("Netherlands"),"M","F","africa",1,2,{f:["AG","HE"]}),
+  S("Orange Tulip Scholarship","Nuffic",...E("Netherlands"),"BM","P",["India","Indonesia","Vietnam","Thailand","China","Brazil","Mexico","South Africa"],2,4),
+  S("VLIR-UOS Master Scholarships","VLIR-UOS",...E("Belgium"),"M","F",["Nepal","Indonesia","Vietnam","Philippines","Cambodia","Kenya","Ethiopia","Uganda","Tanzania","Rwanda","South Africa"],2,2,{f:["AG","HE","SO","ST","EN"]}),
+  S("ARES Scholarships","ARES",...E("Belgium"),"M","F",["Nepal","Vietnam","Philippines","Cambodia","Kenya","Ethiopia","Uganda","Tanzania","Rwanda"],2,2,{w:2,f:["AG","HE","SO","EN"]}),
+  S("Science@Leuven Scholarship","KU Leuven",...E("Belgium"),"M","P","all",1,2,{f:["ST","CS","HE","EN"]}),
+  S("Master Grants for Developing Countries","Ghent University",...E("Belgium"),"M","F","dev",1,2),
+  S("IRO Doctoral Scholarships","KU Leuven",...E("Belgium"),"P","F","dev",1,12),
+
+  /* ---- Switzerland and the Nordics ---- */
+  S("Swiss Government Excellence Scholarships","Swiss Confederation",...E("Switzerland"),"P","F","all",1,11),
+  S("ETH Excellence Scholarship","ETH Zurich",...E("Switzerland"),"M","F","all",1,12,{f:STEM}),
+  S("EPFL Excellence Fellowships","EPFL",...E("Switzerland"),"M","P","all",1,12,{f:STEM}),
+  S("Excellence Master Fellowships","University of Geneva",...E("Switzerland"),"M","P","all",1,3,{f:["ST","CS","HE"]}),
+  S("UNIL Master's Grants","University of Lausanne",...E("Switzerland"),"M","F","all",1,11),
+  S("Geneva Graduate Institute Scholarships","Geneva Graduate Institute",...E("Switzerland"),"MP","P","all",1,1,{f:["SO","BU"]}),
+  S("SI Scholarship for Global Professionals","Swedish Institute",...E("Sweden"),"M","F",["Bangladesh","Pakistan","Nepal","Sri Lanka","Indonesia","Vietnam","Philippines","Cambodia","Nigeria","Ghana","Kenya","Ethiopia","Uganda","Tanzania","Rwanda","Egypt","South Africa","Brazil"],2,2,{w:2}),
+  S("Lund University Global Scholarship","Lund University",...E("Sweden"),"BM","P","all",1,2),
+  S("Chalmers IPOET Scholarships","Chalmers University of Technology",...E("Sweden"),"M","P","all",2,1,{f:["EN","CS","ST"]}),
+  S("KTH Scholarship","KTH Royal Institute of Technology",...E("Sweden"),"M","P","all",1,1,{f:["EN","CS","ST"]}),
+  S("Uppsala University Global Scholarships","Uppsala University",...E("Sweden"),"M","P","all",1,1),
+  S("Stockholm University Scholarships","Stockholm University",...E("Sweden"),"M","P","all",1,1),
+  S("Danish Government Scholarships","Danish Government and universities",...E("Denmark"),"M","F","all",1,1),
+  S("Finland Scholarship","Finnish Government and universities",...E("Finland"),"M","P","all",2,1),
+  S("University of Helsinki Scholarship","University of Helsinki",...E("Finland"),"M","F","all",1,1),
+  S("Tampere University Scholarship","Tampere University",...E("Finland"),"M","P","all",2,1),
+  S("BI Presidential Scholarship","BI Norwegian Business School",...E("Norway"),"M","P","all",1,3,{f:["BU"]}),
+
+  /* ---- Rest of Europe ---- */
+  S("Italian Government Scholarships (MAECI)","Italian Ministry of Foreign Affairs",...E("Italy"),"MP","F","all",2,6),
+  S("Padua International Excellence Scholarship","University of Padua",...E("Italy"),"BM","F","all",1,3),
+  S("Politecnico di Milano Merit-Based Scholarships","Politecnico di Milano",...E("Italy"),"M","P","all",1,4,{f:["EN","CS","AR"]}),
+  S("Bocconi Merit and International Awards","Bocconi University",...E("Italy"),"BM","P","all",1,1,{f:["BU","ST","SO"]}),
+  S("Scuola Normale Superiore PhD Scholarships","Scuola Normale Superiore",...E("Italy"),"P","F","all",1,8),
+  S("Invest Your Talent in Italy","Italian Government",...E("Italy"),"M","F",["India","Indonesia","Vietnam","China","Brazil","Mexico","Egypt","Ethiopia","Ghana"],2,3,{f:["EN","BU","AR","CS"]}),
+  S("Stipendium Hungaricum","Government of Hungary",...E("Hungary"),"BMP","F","all",3,1,{r:0}),
+  S("Romanian Government Scholarships","Government of Romania",...E("Romania"),"BMP","F","all",3,3,{r:0}),
+  S("NAWA Banach Scholarship","Polish National Agency for Academic Exchange",...E("Poland"),"M","F","dev",3,3,{f:STEM}),
+  S("National Scholarship Programme of Slovakia","Slovak Government",...E("Slovakia"),"MP","P","all",3,4,{n:"Short study and research stays"}),
+  S("Türkiye Scholarships","Government of Türkiye",...E("Türkiye"),"BMP","F","all",3,2,{e:0,r:0}),
+  S("la Caixa INPhINIT Doctoral Fellowships","la Caixa Foundation",...E("Spain"),"P","F","all",1,2,{f:STEM}),
+  S("Russian Government Scholarships","Government of Russia",...E("Russia"),"BMP","F","all",3,12,{e:0,r:0}),
+
+  /* ---- Japan and Korea ---- */
+  S("MEXT Research Scholarship","Government of Japan",...A("Japan"),"MP","F","all",2,5,{e:0}),
+  S("MEXT Undergraduate Scholarship","Government of Japan",...A("Japan"),"B","F","all",2,5,{e:0}),
+  S("MEXT University Recommendation Scholarship","Government of Japan",...A("Japan"),"MP","F","all",2,12,{e:0}),
+  S("Japan Human Resource Development Scholarship (JDS)","JICA",...A("Japan"),"M","F",["Bangladesh","Nepal","Sri Lanka","Bhutan","Maldives","Pakistan","Vietnam","Philippines","Myanmar","Cambodia","Ghana","Kenya"],3,11,{w:2,f:["BU","SO","EN","AG"],n:"Mainly for young government officials"}),
+  S("JICA SDGs Global Leader Program","JICA",...A("Japan"),"MP","F","dev",3,10,{w:2,r:0,n:"Mainly for government officials and academics"}),
+  S("Honjo International Scholarship","Honjo International Scholarship Foundation",...A("Japan"),"MP","P","all",2,10,{e:0}),
+  S("JASSO Honors Scholarship","Japan Student Services Organization",...A("Japan"),"BMP","P","all",3,4,{e:0,r:0}),
+  S("University of Tokyo Fellowship","University of Tokyo",...A("Japan"),"P","F","all",1,12),
+  S("Kyoto iUP Scholarship","Kyoto University",...A("Japan"),"B","F","all",1,12),
+  S("OIST PhD Fellowship","Okinawa Institute of Science and Technology",...A("Japan"),"P","F","all",1,11,{f:STEM}),
+  S("Ajinomoto Scholarship for ASEAN Students","Ajinomoto Foundation",...A("Japan"),"M","F",["Indonesia","Vietnam","Philippines","Thailand","Malaysia"],2,5,{f:["HE","AG","EN","ST"]}),
+  S("Global Korea Scholarship (Graduate)","Government of Korea",...A("South Korea"),"MP","F","all",2,3,{e:0,r:0}),
+  S("Global Korea Scholarship (Undergraduate)","Government of Korea",...A("South Korea"),"B","F","all",2,10,{e:0}),
+  S("KAIST International Student Scholarship","KAIST",...A("South Korea"),"BMP","F","all",1,9,{f:STEM}),
+  S("SNU Global Scholarship","Seoul National University",...A("South Korea"),"MP","P","all",1,9),
+  S("UST Scholarship","University of Science and Technology, Korea",...A("South Korea"),"MP","F","all",2,4,{f:STEM}),
+  S("KOICA Scholarship Program","KOICA",...A("South Korea"),"M","F","dev",3,3,{w:2,n:"Mainly for government officials"}),
+
+  /* ---- China, Hong Kong, Taiwan, Singapore ---- */
+  S("Chinese Government Scholarship","China Scholarship Council",...A("China"),"BMP","F",NATIONS.filter(n => n !== "China"),3,3,{}),
+  S("Schwarzman Scholars","Tsinghua University",...A("China"),"M","F","all",1,9,{f:["SO","BU"]}),
+  S("Yenching Academy Scholarship","Peking University",...A("China"),"M","F","all",1,12,{f:["SO","AR","BU"]}),
+  S("ANSO Scholarship for Young Talents","Alliance of International Science Organizations",...A("China"),"MP","F",NATIONS.filter(n => n !== "China"),2,2,{f:STEM}),
+  S("Shanghai Government Scholarship","Shanghai Municipal Government",...A("China"),"BMP","F",NATIONS.filter(n => n !== "China"),3,4,{r:0}),
+  S("Hong Kong PhD Fellowship Scheme","Research Grants Council",...A("Hong Kong"),"P","F","all",1,12),
+  S("Taiwan Scholarship (MOE)","Ministry of Education, Taiwan",...A("Taiwan"),"BMP","F","all",3,3,{e:0,r:0}),
+  S("Singapore International Graduate Award (SINGA)","A*STAR",...A("Singapore"),"P","F","all",1,6,{f:STEM}),
+  S("NUS Research Scholarship","National University of Singapore",...A("Singapore"),"MP","F","all",1,11),
+  S("NTU Research Scholarship","Nanyang Technological University",...A("Singapore"),"MP","F","all",1,11),
+  S("Lee Kong Chian Graduate Scholarships","National University of Singapore",...A("Singapore"),"P","F","all",1,11),
+  S("ASEAN Undergraduate Scholarship","Singapore universities",...A("Singapore"),"B","F","asean",1,3),
+
+  /* ---- South and Southeast Asia ---- */
+  S("Brunei Darussalam Government Scholarship","Government of Brunei",...A("Brunei"),"BMP","F",[...new Set([...CW, ...ASEAN, ...OIC])],3,2,{r:0}),
+  S("Malaysia International Scholarship","Government of Malaysia",...A("Malaysia"),"MP","F",NATIONS.filter(n => n !== "Malaysia"),2,3),
+  S("Thailand International Postgraduate Programme","Thailand International Cooperation Agency",...A("Thailand"),"M","F","dev",3,3),
+  S("AIT Scholarships","Asian Institute of Technology",...A("Thailand"),"MP","P","asia",2,3,{f:["EN","CS","AG","BU"]}),
+  S("Chulalongkorn Scholarship for ASEAN and Non-ASEAN Countries","Chulalongkorn University",...A("Thailand"),"MP","F","all",2,3),
+  S("ICCR Scholarships","Indian Council for Cultural Relations",...A("India"),"BMP","F",notIndia,3,4,{r:0}),
+  S("ICCR Suborno Jayanti Scholarship","Indian Council for Cultural Relations",...A("India"),"BMP","F",["Bangladesh"],3,3,{r:0}),
+  S("Study in India Scholarship","Government of India",...A("India"),"BM","P",notIndia,3,5),
+  S("South Asian University Scholarships","South Asian University",...A("India"),"MP","F","sa",2,4),
+
+  /* ---- Middle East and Africa ---- */
+  S("KAUST Fellowship","King Abdullah University of Science and Technology",...ME("Saudi Arabia"),"MP","F","all",1,1,{f:STEM}),
+  S("KFUPM Graduate Scholarships","King Fahd University of Petroleum and Minerals",...ME("Saudi Arabia"),"MP","F","all",2,2,{f:["EN","CS","ST","BU"]}),
+  S("Islamic University of Madinah Scholarship","Islamic University of Madinah",...ME("Saudi Arabia"),"B","F","all",3,3,{e:0}),
+  S("HBKU Scholarships","Hamad Bin Khalifa University",...ME("Qatar"),"MP","F","all",2,2),
+  S("Doha Institute Scholarships","Doha Institute for Graduate Studies",...ME("Qatar"),"M","F","all",2,1,{f:["SO","AR","BU"]}),
+  S("Khalifa University Graduate Scholarship","Khalifa University",...ME("United Arab Emirates"),"MP","F","all",2,4,{f:STEM}),
+  S("MBZUAI Scholarship","Mohamed bin Zayed University of Artificial Intelligence",...ME("United Arab Emirates"),"MP","F","all",1,1,{f:["CS","ST"]}),
+  S("NYU Abu Dhabi Financial Aid","NYU Abu Dhabi",...ME("United Arab Emirates"),"B","F","all",1,1,{n:"Need-based, after admission"}),
+  S("Mandela Rhodes Scholarship","Mandela Rhodes Foundation","South Africa","Africa","M","F","africa",2,4),
+  S("Pan African University Scholarships","African Union","Multiple countries","Africa","MP","F","africa",2,5)
+];
+
+/* Official links. Each one was confirmed against search results on 17 Nov 2026:
+   the address is on the provider's own domain, or official documents name it as the official site. */
+const OFFICIAL = {
+  "Chevening Scholarships":"https://www.chevening.org/scholarships/",
+  "Commonwealth Master's Scholarships":"https://cscuk.fcdo.gov.uk/about-us/scholarships/",
+  "Commonwealth PhD Scholarships":"https://cscuk.fcdo.gov.uk/about-us/scholarships/",
+  "Commonwealth Shared Scholarships":"https://cscuk.fcdo.gov.uk/about-us/scholarships/",
+  "Commonwealth Distance Learning Scholarships":"https://cscuk.fcdo.gov.uk/scholarships/commonwealth-distance-learning-scholarships/",
+  "Gates Cambridge Scholarship":"https://www.gatescambridge.org/",
+  "Rhodes Scholarship":"https://www.rhodeshouse.ox.ac.uk/scholarships/the-rhodes-scholarship/",
+  "Clarendon Fund Scholarships":"https://www.ox.ac.uk/clarendon/about/purpose",
+  "Fulbright Foreign Student Program":"https://foreign.fulbrightonline.org/apply",
+  "Knight-Hennessy Scholars":"https://knight-hennessy.stanford.edu/",
+  "Erasmus Mundus Joint Masters":"https://www.eacea.ec.europa.eu/scholarships/emjmd-catalogue_en",
+  "DAAD EPOS Development-Related Postgraduate Courses":"https://daad.de/epos-info",
+  "Eiffel Excellence Scholarship":"https://campusfrance.org/en/eiffel-scholarship-program-of-excellence",
+  "Stipendium Hungaricum":"https://stipendiumhungaricum.hu/",
+  "Türkiye Scholarships":"https://www.turkiyeburslari.gov.tr/",
+  "MEXT Research Scholarship":"https://www.studyinjapan.go.jp/en/planning/scholarship/application/",
+  "MEXT Undergraduate Scholarship":"https://www.studyinjapan.go.jp/en/planning/scholarship/application/",
+  "MEXT University Recommendation Scholarship":"https://www.studyinjapan.go.jp/en/planning/scholarship/application/",
+  "Global Korea Scholarship (Graduate)":"https://www.studyinkorea.go.kr/",
+  "Global Korea Scholarship (Undergraduate)":"https://www.studyinkorea.go.kr/",
+  "Chinese Government Scholarship":"https://www.campuschina.org/",
+  "Australia Awards Scholarships":"https://www.dfat.gov.au/people-to-people/australia-awards",
+  "SI Scholarship for Global Professionals":"https://si.se/en/apply/scholarships/swedish-institute-scholarships-for-global-professionals/",
+  "Swiss Government Excellence Scholarships":"https://www.sbfi.admin.ch/en/swiss-government-excellence-scholarships",
+  "Joint Japan/World Bank Graduate Scholarship":"https://www.worldbank.org/en/programs/scholarships/jj-wbgsp",
+  "ADB-Japan Scholarship Program":"https://www.adb.org/work-with-us/careers/japan-scholarship-program",
+  "IsDB Scholarship Programme":"https://www.isdb.org/scholarships",
+  "Manaaki New Zealand Scholarships":"https://www.nzscholarships.govt.nz/",
+  "ICCR Scholarships":"https://a2ascholarships.iccr.gov.in/",
+  "Queen Elizabeth Commonwealth Scholarships":"https://acu.ac.uk/funding-opportunities/for-students/scholarships/queen-elizabeth-commonwealth-scholarships/",
+  "Weidenfeld-Hoffmann Scholarships":"https://www.ox.ac.uk/admissions/graduate/fees-and-funding/fees-funding-and-scholarship-search/weidenfeld-hoffmann-scholarships-and-leadership-programme",
+  "Reach Oxford Scholarship":"https://www.ox.ac.uk/admissions/undergraduate/fees-and-funding/oxford-bursaries-and-scholarships/reach-oxford",
+  "Oxford Pershing Square Scholarship":"https://www.sbs.ox.ac.uk/oxford-experience/scholarships-and-funding/oxford-pershing-square-scholarship",
+  "Skoll Scholarship":"https://skollscholarship.web.ox.ac.uk/",
+  "Cambridge Trust Scholarships":"https://www.cambridgetrust.org/scholarships/cambridge-trust-scholarship",
+  "Jardine Scholarship":"https://www.jardines.com/en/community/foundation.html",
+  "Felix Scholarships":"https://www.ox.ac.uk/admissions/graduate/fees-and-funding/fees-funding-and-scholarship-search/felix-scholarships",
+  "GREAT Scholarships":"https://study-uk.britishcouncil.org/scholarships/great-scholarships",
+  "British Council Scholarships for Women in STEM":"https://www.britishcouncil.org/study-work-abroad/in-uk/scholarship-women-stem",
+  "Scotland's Saltire Scholarships":"https://www.scotland.org/study/saltire-scholarships",
+  "Imperial College President's PhD Scholarships":"https://www.imperial.ac.uk/study/pg/fees-and-funding/scholarships/presidents-phd-scholarships",
+  "UCL Global Masters Scholarship":"https://www.ucl.ac.uk/scholarships/ucl-global-masters-scholarship",
+  "Bristol Think Big Scholarships":"https://www.bristol.ac.uk/international-scholarships/",
+  "Warwick Chancellor's International Scholarship":"https://warwick.ac.uk/services/dc/schols_fund/scholarships_and_funding/chancellors_int/",
+  "Developing Solutions Masters Scholarship":"https://www.nottingham.ac.uk/pgstudy/funding/developing-solutions-masters-scholarship",
+  "Manchester Global Futures Scholarship":"https://www.manchester.ac.uk/study/international/finance-and-scholarships/funding/global-futures-scholarship/",
+  "Equity and Merit Scholarships":"https://www.manchester.ac.uk/study/masters/fees-and-funding/masters-student-funding/equity-merit-scholarships/",
+  "LSE Graduate Support Scheme":"https://www.lse.ac.uk/study-at-lse/graduate/fees-and-funding/graduate-support-scheme",
+  "Glasgow Global Leadership Scholarship":"https://www.gla.ac.uk/scholarships/globalleadershipscholarship/",
+  "Government of Ireland International Education Scholarship":"https://hea.ie/international-education/government-of-ireland-international-education-scholarships/",
+  "Ireland Fellows Programme":"https://www.ireland.ie/en/irish-aid/get-involved/ireland-fellows-programme/",
+  "Trinity Global Excellence Scholarships":"https://www.tcd.ie/study/international/scholarships/postgraduate/gexpg.php",
+  "UCD Global Excellence Scholarship":"https://www.ucd.ie/global/study-at-ucd/scholarshipsfinances/scholarships/globalexcellencescholarships/",
+  "Hubert H. Humphrey Fellowship":"https://www.humphreyfellowship.org/",
+  "AAUW International Fellowships":"https://www.aauw.org/resources/programs/international-fellowships/",
+  "East-West Center Graduate Degree Fellowship":"https://www.eastwestcenter.org/education/student-programs/east-west-center-graduate-degree-fellowship",
+  "AU Emerging Global Leader Scholarship":"https://www.american.edu/admissions/international/EGLS.cfm",
+  "Boston University Trustee Scholarship":"https://www.bu.edu/admissions/apply/tuition-aid-scholarships/scholarships/trustee/",
+  "Harvard College Financial Aid":"https://college.harvard.edu/financial-aid",
+  "Yale University Financial Aid":"https://admissions.yale.edu/financial-aid-international-applicants",
+  "MIT Financial Aid":"https://sfs.mit.edu/undergraduate-students/apply-for-aid/international",
+  "Princeton University Financial Aid":"https://admission.princeton.edu/apply/international-students",
+  "Karsh International Scholarship":"https://ousf.duke.edu/merit-scholarships/karsh-international-scholars-program/",
+  "P.E.O. International Peace Scholarship":"https://www.peointernational.org/ips",
+  "Margaret McNamara Education Grants":"https://www.mmeg.org/apply",
+  "Fulbright-Nehru Master's Fellowships":"https://www.usief.org.in/fulbright-nehru-fellowships.aspx",
+  "Tata Scholarship":"https://admissions.cornell.edu/apply/international-students/tata-scholarship",
+  "Rotary Peace Fellowship":"https://www.rotary.org/en/our-programs/peace-fellowships",
+  "Mastercard Foundation Scholars Program":"https://mastercardfdn.org/scholars",
+  "Aga Khan Foundation International Scholarship":"https://the.akdn/en/international-scholarships",
+  "Inlaks Shivdasani Scholarships":"https://inlaksfoundation.org/",
+  "WMI Empowerment Through Education":"https://www.wellsmountaininitiative.org/",
+  "Schlumberger Faculty for the Future":"https://www.facultyforthefuture.net/",
+  "OWSD PhD Fellowship":"https://owsd.net/node/97988",
+  "TWAS PhD Fellowships":"https://twas.org/opportunities/fellowships/phd",
+  "Google PhD Fellowship":"https://research.google/programs-and-events/phd-fellowship/",
+  "Zonta Amelia Earhart Fellowship":"https://www.zonta.org/AEFellowship",
+  "Lester B. Pearson International Scholarship":"https://internationalexperience.utoronto.ca/global-experiences/global-scholarships/lester-b-pearson-scholarship",
+  "Pierre Elliott Trudeau Foundation Doctoral Scholarship":"https://www.trudeaufoundation.ca/become-scholar",
+  "UBC International Scholars Program (Karen McKellin Leader of Tomorrow Award)":"https://you.ubc.ca/financial-planning/scholarships-awards-international-students/international-scholars/",
+  "McCall MacBain Scholarships":"https://mccallmacbainscholars.org/",
+  "University of Manitoba Graduate Fellowship":"https://umanitoba.ca/graduate-studies/funding-awards-and-financial-aid/university-manitoba-graduate-fellowship-umgf",
+  "University of Saskatchewan Dean's Scholarship":"https://cgps.usask.ca/students/programs/intl-recruitment.php",
+  "Killam Predoctoral Scholarship":"https://www.dal.ca/faculty/gradstudies/finance-your-studies/scholarships-bursaries/killam-doctoral.html",
+  "UBC Four Year Doctoral Fellowship":"https://www.grad.ubc.ca/awards/four-year-doctoral-fellowship-4yf",
+  "Connaught International Scholarship":"https://www.sgs.utoronto.ca/awards/connaught-international-scholarship/",
+  "International Master's and Doctoral Awards":"https://uwaterloo.ca/current-graduate-students/awards-and-funding/international-student-funding",
+  "Research Training Program Scholarship":"https://www.education.gov.au/research-training-program",
+  "Melbourne Graduate Research Scholarships":"https://scholarships.unimelb.edu.au/awards/graduate-research-scholarships",
+  "Monash International Leadership Scholarship":"https://www.monash.edu/study/fees-scholarships/scholarships/find-a-scholarship/monash-international-leadership-scholarship-5571Z",
+  "ANU Chancellor's International Scholarship":"https://study.anu.edu.au/scholarships/find-scholarship/anu-chancellors-international-scholarship",
+  "Deakin Vice-Chancellor's International Scholarship":"https://www.deakin.edu.au/study/fees-and-scholarships/scholarships/find-a-scholarship/deakin-vice-chancellors-international-scholarship",
+  "Macquarie Vice-Chancellor's International Scholarship":"https://www.mq.edu.au/study/admissions-and-entry/scholarships/international/vice-chancellor-s-international-scholarship",
+  "International Student Excellence Scholarship":"https://www.auckland.ac.nz/en/study/scholarships-and-awards/find-a-scholarship/university-of-auckland-international-student-excellence-scholarship-844-all.html",
+  "University of Otago Doctoral Scholarship":"https://www.otago.ac.nz/international/future-students/subjects-courses/postgraduate-study/scholarships/university-of-otago-doctoral-scholarship",
+  "Wellington Doctoral Scholarship":"https://www.wgtn.ac.nz/scholarships/current/wellington-doctoral-scholarship",
+  "DAAD Research Grants for Doctoral Programmes":"https://www2.daad.de/deutschland/stipendium/datenbank/en/21148-scholarship-database/?detail=57135739",
+  "DAAD Helmut-Schmidt Programme":"https://www.daad.de/en/studying-in-germany/scholarships/daad-funding-programmes/helmut-schmidt-programme/",
+  "Heinrich Böll Foundation Scholarships":"https://www.boell.de/en/scholarships",
+  "Konrad-Adenauer-Stiftung Scholarships":"https://www.kas.de/en/web/begabtenfoerderung-und-kultur/international-talent-development",
+  "Friedrich Ebert Foundation Scholarships":"https://www.fes.de/studienfoerderung",
+  "Friedrich Naumann Foundation Scholarships":"https://www.freiheit.org/student-scholarships",
+  "Hanns Seidel Foundation Scholarships":"https://www.hss.de/en/scholarship-programmes/",
+  "Rosa Luxemburg Foundation Scholarships":"https://www.rosalux.de/en/foundation/studienwerk",
+  "KAAD Scholarships":"https://www.kaad.de/en/stipendien/stipendienprogramm-1",
+  "Deutschlandstipendium":"https://www.deutschlandstipendium.de/deutschlandstipendium/en/the-programme/the-programme.html",
+  "International Max Planck Research Schools":"https://www.mpg.de/en/imprs",
+  "Marie Skłodowska-Curie Doctoral Networks":"https://marie-sklodowska-curie-actions.ec.europa.eu/actions/doctoral-networks",
+  "CEU Master's and Doctoral Scholarships":"https://www.ceu.edu/financialaid",
+  "Ernst Mach Grant":"https://oead.at/en/study-research-teaching/overview-grants-and-scholarships",
+  "Paris-Saclay International Master's Scholarships":"https://www.universite-paris-saclay.fr/en/admission/bourses-et-aides-financieres/international-masters-scholarships-program-idex",
+  "ENS International Selection":"https://www.ens.psl.eu/en/academics/admissions/international-selection",
+  "Ampère Excellence Scholarships":"https://www.ens-lyon.fr/en/studies/admissions/application-masters-degrees-scholarships",
+  "Charpak Master's Scholarship":"https://inde.campusfrance.org/node/88",
+  "INSEAD MBA Scholarships":"https://www.insead.edu/master-programmes/mba/financing/scholarships",
+  "Émile Boutmy Scholarship":"https://www.sciencespo.fr/students/en/fees-funding/bursaries-financial-aid/emile-boutmy-scholarship/",
+  "HEC Paris Excellence Scholarships":"https://www.hec.edu/en/hec-paris-scholarships",
+  "NL Scholarship":"https://www.studyinnl.org/finances/nl-scholarship",
+  "Leiden University Excellence Scholarship":"https://www.universiteitleiden.nl/en/scholarships/sea/leiden-university-excellence-scholarship-lexs",
+  "Amsterdam Merit Scholarship":"https://www.uva.nl/en/education/fees-and-funding/masters-scholarships-and-loans/amsterdam-merit-scholarship",
+  "Radboud Scholarship Programme":"https://www.ru.nl/en/education/scholarships/radboud-scholarship-programme",
+  "University of Twente Scholarship":"https://www.utwente.nl/en/education/scholarship-finder/university-of-twente-scholarship/",
+  "Justus & Louise van Effen Excellence Scholarships":"https://www.tudelft.nl/en/education/practical-matters/scholarships/justus-louise-van-effen-excellence-scholarships/",
+  "Maastricht NL-High Potential Scholarship":"https://www.maastrichtuniversity.nl/scholarships/maastricht-university-nl-high-potential-scholarship",
+  "Erik Bleumink Fund":"https://www.rug.nl/alumni/support-research-and-education/scholarships-and-awards/eric-bleumink-fund/",
+  "Africa Scholarship Programme":"https://www.wur.nl/en/education-programmes/master/practical-information-masters/scholarships/africa-scholarship-programme.htm",
+  "VLIR-UOS Master Scholarships":"https://www.vliruos.be/en/scholarships/scholarships_in_flanders/scholarships_for_master_programmes_(icp)/114",
+  "ARES Scholarships":"https://www.ares-ac.be/en/international-training-scholarships-2027-2028",
+  "Science@Leuven Scholarship":"https://wet.kuleuven.be/scienceatleuven/scholarship",
+  "IRO Doctoral Scholarships":"https://www.kuleuven.be/iro",
+  "ETH Excellence Scholarship":"https://ethz.ch/en/studies/financial/scholarships/excellencescholarship.html",
+  "EPFL Excellence Fellowships":"https://www.epfl.ch/education/master/master-excellence-fellowships/",
+  "Excellence Master Fellowships":"https://www.unige.ch/sciences/en/enseignements/formations/masters/excellencemasterfellowships/",
+  "UNIL Master's Grants":"https://www.unil.ch/international/unilmastersgrant-1",
+  "Geneva Graduate Institute Scholarships":"https://www.graduateinstitute.ch/tuition-fees-financial-aid-packages",
+  "Lund University Global Scholarship":"https://www.lunduniversity.lu.se/study/admission-degree-studies/scholarships-and-awards/lund-university-global-scholarship",
+  "Chalmers IPOET Scholarships":"https://www.chalmers.se/en/education/application-and-admission/scholarships-for-fee-paying-students/",
+  "KTH Scholarship":"https://kth.se/en/studies/master/admissions/scholarships/kth-scholarship",
+  "Uppsala University Global Scholarships":"https://www.uu.se/en/study/masters-studies/scholarships/uppsala-university-scholarships",
+  "Stockholm University Scholarships":"https://www.su.se/english/education/how-to-apply/costs-fees-and-scholarships/scholarships",
+  "Danish Government Scholarships":"https://studyindenmark.dk/study-options/scholarships",
+  "Finland Scholarship":"https://www.studyinfinland.fi/funding-your-studies/bachelors-and-masters-scholarships",
+  "University of Helsinki Scholarship":"https://www.helsinki.fi/en/studying/tuition-fees",
+  "Tampere University Scholarship":"https://opiskelijanopas.tuni.fi/en/tampere-university/study-right-and-annual-enrolment/scholarships-fee-paying-students-admitted-2021-or-later",
+  "BI Presidential Scholarship":"https://www.bi.no/en/programmes-and-individual-courses/scholarships/bi-presidential-scholarships",
+  "Italian Government Scholarships (MAECI)":"https://borsedistudio.esteri.it/borsedistudio/",
+  "Invest Your Talent in Italy":"https://www.esteri.it/en/servizi-opportunita/opportunita/borse-di-studio/per-cittadini-stranieri/progetti-speciali/invest-your-talent-in-italy/",
+  "Padua International Excellence Scholarship":"https://www.unipd.it/en/padua-excellence",
+  "Politecnico di Milano Merit-Based Scholarships":"https://www.polimi.it/en/international-prospective-students/laurea-magistrale-programmes-equivalent-to-master-of-science/scholarships/merit-based-scholarships",
+  "Bocconi Merit and International Awards":"https://www.unibocconi.it/en/applying-bocconi/master-science-programs/funding/bocconi-graduate-merit-awards",
+  "Scuola Normale Superiore PhD Scholarships":"https://www.sns.it/en/phd-admission-competition",
+  "Romanian Government Scholarships":"https://scholarships.studyinromania.gov.ro/",
+  "NAWA Banach Scholarship":"https://nawa.gov.pl/en/students/foreign-students/the-banach-scholarship-programme",
+  "National Scholarship Programme of Slovakia":"https://www.scholarships.sk/en/",
+  "la Caixa INPhINIT Doctoral Fellowships":"https://lacaixafoundation.org/en/doctoral-inphinit-fellowships-incoming-call",
+  "Russian Government Scholarships":"https://education-in-russia.com/",
+  "Japan Human Resource Development Scholarship (JDS)":"https://jds-scholarship.org/",
+  "JICA SDGs Global Leader Program":"https://www.jica.go.jp/jica-dsp/english/index.html",
+  "Honjo International Scholarship":"https://www.hisf.or.jp/en/scholarship/",
+  "JASSO Honors Scholarship":"https://www.jasso.go.jp/en/ryugaku/scholarship_j/shoreihi/about.html",
+  "University of Tokyo Fellowship":"https://www.u-tokyo.ac.jp/en/prospective-students/fellowship.html",
+  "Kyoto iUP Scholarship":"https://www.iup.kyoto-u.ac.jp/student-support",
+  "OIST PhD Fellowship":"https://admissions.oist.jp/",
+  "Ajinomoto Scholarship for ASEAN Students":"https://ajinomoto.com.vn/en/ajinomoto-scholarship-for-aseanone-international-students-1",
+  "KAIST International Student Scholarship":"https://admission.kaist.ac.kr/intl-graduate/FinancialSupport/Scholarship/KAISTScholarship",
+  "SNU Global Scholarship":"https://snugle-i.snu.ac.kr/finacial-support/scholarships",
+  "UST Scholarship":"https://admission.ust.ac.kr/prog/entschGuideline/admission_eng/sub02_01_01/list.do",
+  "KOICA Scholarship Program":"https://www.koica.go.kr/sites/ciat/index.do",
+  "Schwarzman Scholars":"https://www.schwarzmanscholars.org/admissions/",
+  "Yenching Academy Scholarship":"https://yenchingacademy.pku.edu.cn/",
+  "ANSO Scholarship for Young Talents":"https://www.anso.org.cn/programmes/talent/scholarship/",
+  "Shanghai Government Scholarship":"https://edu.sh.gov.cn/study_en_scholarships/20240904/5d8add31c7ce44a4b1e0d5bdfafe1495.html",
+  "Hong Kong PhD Fellowship Scheme":"https://cerg1.ugc.edu.hk/hkpfs/index.html",
+  "Taiwan Scholarship (MOE)":"https://edu.law.moe.gov.tw/EngLawContent.aspx?id=112&lan=E",
+  "Singapore International Graduate Award (SINGA)":"https://www.a-star.edu.sg/Scholarships/for-graduate-studies/singapore-international-graduate-award-singa",
+  "NUS Research Scholarship":"https://nusgs.nus.edu.sg/scholarships/nus-research-scholarship",
+  "NTU Research Scholarship":"https://www.ntu.edu.sg/admissions/graduate/financialmatters/scholarships/rss",
+  "ASEAN Undergraduate Scholarship":"https://www.nus.edu.sg/oam/scholarships/scholarships-for-freshmen-(international-students)/asean-undergraduate-scholarship",
+  "Brunei Darussalam Government Scholarship":"https://www.mfa.gov.bn/Pages/online-bdgs.aspx",
+  "Malaysia International Scholarship":"https://biasiswa.mohe.gov.my/INTER/index.php",
+  "Thailand International Postgraduate Programme":"https://tica-thaigov.mfa.go.th/",
+  "AIT Scholarships":"https://ait.ac.th/financial/ait-scholarships/",
+  "Chulalongkorn Scholarship for ASEAN and Non-ASEAN Countries":"https://academic.chula.ac.th/other",
+  "ICCR Suborno Jayanti Scholarship":"https://www.sjsdhaka.gov.in/",
+  "Study in India Scholarship":"https://studyinindia.gov.in/studyin_india_sii",
+  "South Asian University Scholarships":"https://admissions.sau.int/scholarships/",
+  "KAUST Fellowship":"https://admissions.kaust.edu.sa/fees-funding",
+  "KFUPM Graduate Scholarships":"https://cgis.kfupm.edu.sa/admission/kfupm-scholarship",
+  "Islamic University of Madinah Scholarship":"https://iu.edu.sa/",
+  "HBKU Scholarships":"https://hbku.edu.qa/scholarship",
+  "Doha Institute Scholarships":"https://www.dohainstitute.edu.qa/",
+  "Khalifa University Graduate Scholarship":"https://www.ku.ac.ae/scholarships-graduate",
+  "MBZUAI Scholarship":"https://mbzuai.ac.ae/study/admissions/",
+  "NYU Abu Dhabi Financial Aid":"https://nyuad.nyu.edu/en/admissions/undergraduate/scholarships-and-financial-aid.html",
+  "Mandela Rhodes Scholarship":"https://www.mandelarhodes.org/scholarship/apply/",
+  "Pan African University Scholarships":"https://pau-au.africa/"
+};
+SCHOLARSHIPS.forEach(s => { s.url = OFFICIAL[s.name] || ""; });
+Object.keys(OFFICIAL).forEach(n => { if(!SCHOLARSHIPS.some(s => s.name === n)) console.error("No scholarship named", n); });
+
+/* ================= 2. LOGIC: eligibility, score, application status ================= */
+const openList = s => Array.isArray(s.openTo) ? s.openTo : GROUPS[s.openTo].list;
+const openToNation = (s, n) => { const l = openList(s); return !l || l.includes(n);};
+const openLabel = s => Array.isArray(s.openTo) ? "Citizens of: " + s.openTo.join(", ") : GROUPS[s.openTo].label;
+
+/* Requirements depend on the degree level. Values are indicative tiers (1 = most competitive). */
+function req(s, lv){
+  const T = s.tier, noEng = s.ielts === null;
+  if(lv === "bachelor") return { ssc:[0,4.8,4.5,4.0][T], hsc:[0,4.8,4.5,4.0][T], ielts:noEng ? null : [0,6.5,6.0,5.5][T] };
+  if(lv === "phd") return { cgpa:[0,3.5,3.2,3.0][T], mcgpa:[0,3.7,3.5,3.25][T], ielts:noEng ? null : [0,7.0,6.5,6.0][T],
+    work:s.workYears, pubs:[0,2,1,0][T], supervisor:s.research };
+  return { cgpa:s.minCgpa, ielts:s.ielts, work:s.workYears, research:s.research };
+}
+/* Points for a grade: full marks for meeting the minimum, 40% if just below, none otherwise. */
+function grade(val, min, full, near, label, digits){
+  const base = Math.round(full * 0.8);
+  if(val >= min) return [full, {t:label + " meets " + min.toFixed(digits), k:"ok"}];
+  if(val >= min - near) return [Math.round(full * 0.4), {t:label + " slightly below " + min.toFixed(digits), k:"mid"}];
+  return [0, {t:label + " below " + min.toFixed(digits), k:"no"}];
+}
+function english(val, min, full){
+  if(min === null) return [full, {t:"No IELTS minimum listed", k:"ok"}];
+  const base = Math.round(full * 0.8);
+  if(val >= min) return [full, {t:"IELTS meets " + min.toFixed(1), k:"ok"}];
+  if(val === 0) return [Math.round(full * 0.25), {t:"IELTS " + min.toFixed(1) + " needed, not taken yet", k:"mid"}];
+  if(val >= min - 0.5) return [Math.round(full * 0.45), {t:"IELTS slightly below " + min.toFixed(1), k:"mid"}];
+  return [0, {t:"IELTS below " + min.toFixed(1), k:"no"}];
+}
+
+function matchScore(p, s){
+  const blocks = [];
+  if(!openToNation(s, p.nation)) blocks.push({t:"Not open to students from " + p.nation, k:"no"});
+  if(!s.levels.includes(p.level)) blocks.push({t:"Not offered for " + levelName(p.level) + " study", k:"no"});
+  if(blocks.length) return {eligible:false, score:0, reasons:blocks};
+
+  const r = req(s, p.level), reasons = [{t:"Open to students from " + p.nation, k:"ok"}];
+  let score = 0, missedRequired = false;
+  const add = ([pts, reason]) => { score += pts; reasons.push(reason); };
+  const fieldOk = s.fields.includes("any") || s.fields.includes(p.field);
+  const field = full => add(fieldOk ? [full, {t:"Field accepted", k:"ok"}] : [Math.round(full / 5), {t:"Field is not a priority area", k:"mid"}]);
+  const work = full => {
+    if(!r.work) score += full;
+    else if(p.work >= r.work) add([full, {t:r.work + "+ years of work met", k:"ok"}]);
+    else { missedRequired = true; reasons.push({t:"Needs " + r.work + " years of work", k:"no"}); }
+  };
+
+  if(p.level === "bachelor"){
+    field(25);
+    add(grade(p.hsc, r.hsc, 30, 0.3, "HSC GPA", 1));
+    add(grade(p.ssc, r.ssc, 20, 0.3, "SSC GPA", 1));
+    add(english(p.ielts, r.ielts, 25));
+  } else if(p.level === "master"){
+    field(25);
+    add(grade(p.cgpa, r.cgpa, 25, 0.25, "Bachelor's CGPA", 1));
+    add(english(p.ielts, r.ielts, 20));
+    work(15);
+    if(!r.research) score += 15;
+    else if(p.pubs >= 3) add([15, {t:"Strong research record", k:"ok"}]);
+    else if(p.pubs === 2) add([12, {t:"Good research record", k:"ok"}]);
+    else if(p.pubs === 1) add([9, {t:"Some research record", k:"ok"}]);
+    else add([3, {t:"Research record valued, none yet", k:"mid"}]);
+  } else {
+    field(15);
+    add(grade(p.mcgpa, r.mcgpa, 20, 0.25, "Master's CGPA", 2));
+    add(grade(p.cgpa, r.cgpa, 10, 0.25, "Bachelor's CGPA", 1));
+    add(english(p.ielts, r.ielts, 15));
+    const need = Math.max(r.pubs, 1);
+    if(p.pubs > need) add([20, {t:p.pubs + " publications, above what is expected", k:"ok"}]);
+    else if(p.pubs === need) add([16, {t:"Publication record meets expectation", k:"ok"}]);
+    else if(p.pubs > 0) add([8, {t:need + " publications expected", k:"mid"}]);
+    else add([r.pubs ? 2 : 8, {t:r.pubs ? "Publications expected, none yet" : "A publication would help", k:r.pubs ? "no" : "mid"}]);
+    add(p.proposal ? [10, {t:"Research proposal ready", k:"ok"}] : [0, {t:"Research proposal needed", k:"mid"}]);
+    if(!r.supervisor) score += 10;
+    else add(p.supervisor ? [10, {t:"Supervisor agreed", k:"ok"}] : [2, {t:"Contact a supervisor first", k:"mid"}]);
+    if(r.work && p.work < r.work){ missedRequired = true; reasons.push({t:"Needs " + r.work + " years of work", k:"no"}); }
+  }
+
+  if(s.note) reasons.push({t:s.note, k:"mid"});
+  if(missedRequired) score = Math.min(score, 49);
+  return {eligible:true, score, reasons};
+}
+const band = m => !m.eligible ? -1 : m.score >= 80 ? 3 : m.score >= 60 ? 2 : m.score >= 40 ? 1 : 0;
+function verdict(m){
+  if(!m.eligible) return ["Not eligible","var(--bad)"];
+  if(m.score >= 80) return ["Strong match","var(--good)"];
+  if(m.score >= 60) return ["Good match","var(--accent)"];
+  if(m.score >= 40) return ["Possible","var(--warn)"];
+  return ["Weak match","var(--bad)"];
+}
+const NOW = new Date().getMonth() + 1;
+const monthsUntil = s => (s.deadline - NOW + 12) % 12;
+function appStatus(s){
+  const inWindow = s.opens <= s.deadline ? (NOW >= s.opens && NOW <= s.deadline) : (NOW >= s.opens || NOW <= s.deadline);
+  if(NOW === s.deadline) return {key:"open", label:"Closes this month", cls:"mid"};
+  if(inWindow) return {key:"open", label:"Open now", cls:"ok"};
+  return {key:"later", label:"Opens " + MONTHS[s.opens - 1], cls:"later"};
+}
+const levelName = l => l === "phd" ? "PhD" : l[0].toUpperCase() + l.slice(1) + "'s";
+const levelText = s => s.levels.map(levelName).join(", ");
+const STAGES = ["Online application","Document screening","Interview","Final result"];
+const DOCS = {
+  bachelor:["Passport or national ID","SSC certificate and transcript","HSC certificate and transcript","Personal essay","Two recommendation letters from teachers","English test result","Certificates of activities or awards"],
+  master:["Passport or national ID","Bachelor's transcript","Bachelor's degree certificate","CV","Statement of purpose","Two recommendation letters","English test result"],
+  phd:["Passport or national ID","Bachelor's and Master's transcripts","Master's degree certificate","CV with publication list","Research proposal","Supervisor acceptance letter","Two academic recommendation letters","English test result","Master's thesis abstract"]
+};
+const docsFor = (s, lv) => DOCS[lv].concat(lv === "master" && s.research ? ["Research proposal"] : []);
+const coverFor = s => s.funding === "full" ? ["Tuition fees","Living allowance","Often travel and health insurance"] : ["Part of the tuition fees or a fixed grant"];
+const siteLink = s => s.url
+  ? `<a class="btn small" href="${s.url}" target="_blank" rel="noopener">Go to official page</a>`
+  : `<span class="meta" style="margin:0">Official link not verified yet</span>`;
+
+/* ================= 3. TRACKER: saved in this browser only ================= */
+const KEY = "scholarship-finder-v1";
+let track = {saved:{}, docs:{}};
+try { const t = JSON.parse(localStorage.getItem(KEY)); if(t && t.saved && t.docs) track = t;} catch(e){}
+function saveTrack(){ try { localStorage.setItem(KEY, JSON.stringify(track));} catch(e){}}
+const TRACK_STEPS = ["Saved","Preparing documents","Applied","Result received"];
+
+/* ================= 4. PAGE ================= */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const PAGE = 20;
+let usedOwnProfile = false, tab = "all", view = "cards", sortKey = "match", sortDir = 1, limit = PAGE;
+
+NATIONS.forEach(n => $("pNation").add(new Option(n, n, n === "Bangladesh", n === "Bangladesh")));
+FIELDS.forEach(f => $("pField").add(new Option(f, f)));
+[...new Set(SCHOLARSHIPS.map(s => s.region))].sort().forEach(r => $("fRegion").add(new Option(r, r)));
+[...new Set(SCHOLARSHIPS.map(s => s.country))].sort().forEach(c => $("fCountry").add(new Option(c, c)));
+$("total").textContent = SCHOLARSHIPS.length;
+$("linkCount").textContent = SCHOLARSHIPS.filter(s => s.url).length;
+$("totalCountries").textContent = new Set(SCHOLARSHIPS.map(s => s.country)).size - 1;
+
+function readForm(){
+  const num = id => parseFloat($(id).value) || 0;
+  return { nation:$("pNation").value, level:$("pLevel").value, field:$("pField").value,
+    ssc:num("pSsc"), hsc:num("pHsc"), cgpa:num("pCgpa"), mcgpa:num("pMcgpa"), ielts:num("pIelts"),
+    work:Math.floor(num("pWork")), pubs:Math.floor(num("pPubs")),
+    proposal:$("pProposal").checked, supervisor:$("pSupervisor").checked };
+}
+/* Show only the inputs that belong to the chosen degree level. */
+function syncLevel(){
+  const lv = $("pLevel").value;
+  document.querySelectorAll("[data-for]").forEach(el => { el.hidden = !el.dataset.for.split(" ").includes(lv); });
+}
+syncLevel();
+function profileText(p){
+  const eng = "IELTS " + (p.ielts ? p.ielts.toFixed(1) : "not taken");
+  const head = esc(p.nation) + " · " + levelName(p.level) + " · " + esc(p.field);
+  if(p.level === "bachelor") return head + " · SSC " + p.ssc.toFixed(2) + " · HSC " + p.hsc.toFixed(2) + " · " + eng;
+  const tail = " · " + p.work + " yr work · " + p.pubs + " publication" + (p.pubs === 1 ? "" : "s");
+  if(p.level === "master") return head + " · CGPA " + p.cgpa.toFixed(2) + " · " + eng + tail;
+  return head + " · Master's CGPA " + p.mcgpa.toFixed(2) + " · Bachelor's CGPA " + p.cgpa.toFixed(2) + " · " + eng + tail +
+    " · proposal " + (p.proposal ? "ready" : "not ready") + " · supervisor " + (p.supervisor ? "agreed" : "not yet");
+}
+function reqList(s, lv){
+  const r = req(s, lv), out = [];
+  if(lv === "bachelor") out.push("Indicative HSC GPA " + r.hsc.toFixed(1) + " of 5", "Indicative SSC GPA " + r.ssc.toFixed(1) + " of 5");
+  if(lv === "master") out.push("Bachelor's degree, indicative CGPA " + r.cgpa.toFixed(1) + " of 4");
+  if(lv === "phd") out.push("Master's degree, indicative CGPA " + r.mcgpa.toFixed(2) + " of 4", "Bachelor's CGPA around " + r.cgpa.toFixed(1) + " of 4",
+    "Research proposal", r.pubs ? r.pubs + " or more publications expected" : "Publications are an advantage");
+  if(lv === "phd" && r.supervisor) out.push("Agreement from a supervisor is usually needed");
+  if(lv === "master" && r.research) out.push("Research experience is valued");
+  out.push(r.ielts === null ? "No IELTS minimum listed" : "Indicative IELTS " + r.ielts.toFixed(1) + " or equivalent");
+  if(r.work) out.push(r.work + " years of work experience");
+  return out;
+}
+/* The profile used for matching. It changes only when Find my matches is pressed. */
+let profile = readForm();
+
+function getRows(){
+  const p = profile, q = $("q").value.trim().toLowerCase();
+  const region = $("fRegion").value, country = $("fCountry").value, funding = $("fFunding").value,
+        status = $("fStatus").value, elig = $("fElig").value;
+  const rows = SCHOLARSHIPS.map((s, i) => ({s, i, m:matchScore(p, s), st:appStatus(s)}))
+    .filter(r => tab === "all" || track.saved[r.s.name])
+    .filter(r => !q || (r.s.name + " " + r.s.country + " " + r.s.provider).toLowerCase().includes(q))
+    .filter(r => !region || r.s.region === region)
+    .filter(r => !country || r.s.country === country)
+    .filter(r => !funding || r.s.funding === funding)
+    .filter(r => !status || r.st.key === status)
+    .filter(r => elig !== "eligible" || r.m.eligible)
+    .filter(r => elig !== "nation" || openToNation(r.s, p.nation))
+    .filter(r => elig !== "linked" || r.s.url);
+  const cmp = {
+    name:(a, b) => a.s.name.localeCompare(b.s.name),
+    country:(a, b) => a.s.country.localeCompare(b.s.country) || a.s.name.localeCompare(b.s.name),
+    deadline:(a, b) => monthsUntil(a.s) - monthsUntil(b.s),
+    match:(a, b) => (b.m.eligible - a.m.eligible) || (b.m.score - a.m.score) || (a.s.tier - b.s.tier) || (monthsUntil(a.s) - monthsUntil(b.s))
+ }[sortKey];
+  rows.sort((a, b) => cmp(a, b) * sortDir);
+  return {rows, p};
+}
+
+function saveBtn(s, i){
+  const on = !!track.saved[s.name];
+  return `<button type="button" class="btn small ${on ? "on" : "ghost"}" data-act="save" data-i="${i}" aria-pressed="${on}">${on ? "✓ Saved" : "Save"}</button>`;
+}
+function stepSelect(s, i){
+  if(!track.saved[s.name]) return "";
+  return `<select data-act="step" data-i="${i}" aria-label="Application progress for ${esc(s.name)}">${
+    TRACK_STEPS.map(t => `<option${t === track.saved[s.name] ? " selected" : ""}>${t}</option>`).join("")}</select>`;
+}
+const chipsHTML = m => m.reasons.map(r => `<li class="chip ${r.k}">${r.k === "ok" ? "✓" : r.k === "no" ? "✕" : "!"} ${esc(r.t)}</li>`).join("");
+
+function cardHTML({s, i, m, st}){
+  const [label, color] = verdict(m);
+  return `<article class="card${m.eligible ? "" : " out"}">
+    <div>
+      <div class="ring" style="--p:${m.score};--ring:${color}" role="img" aria-label="Match score ${m.score} out of 100"><span>${m.eligible ? m.score : "–"}</span></div>
+      <div class="verdict" style="color:${color}">${label}</div>
+    </div>
+    <div>
+      <h3>${esc(s.name)}</h3>
+      <p class="meta">${esc(s.provider)} · ${esc(s.country)} · ${levelText(s)}</p>
+      <ul class="facts">
+        <li><b>Funding:</b> ${s.funding === "full" ? "Fully funded" : "Partial"}</li>
+        <li><b>Deadline:</b> around ${MONTHS[s.deadline - 1]}</li>
+        <li><span class="pill ${st.cls}">${st.label}</span></li>
+      </ul>
+      <ul class="chips">${chipsHTML(m)}</ul>
+      <div class="cardacts">
+        <button type="button" class="btn small" data-act="detail" data-i="${i}">View details</button>
+        ${saveBtn(s, i)} ${stepSelect(s, i)}
+      </div>
+    </div>
+  </article>`;
+}
+
+function tableHTML(rows, p){
+  const th = (key, text) => `<th aria-sort="${sortKey === key ? (sortDir === 1 ? "ascending" : "descending") : "none"}"><button type="button" data-sort="${key}">${text}${sortKey === key ? (sortDir === 1 ? " ▲" : " ▼") : ""}</button></th>`;
+  return `<table>
+    <thead><tr>${th("name","Scholarship")}${th("country","Host country")}<th>Level</th><th>Funding</th>${th("deadline","Deadline")}<th>Status</th><th>Open to ${esc(p.nation)}</th>${th("match","Match")}<th>Tracker</th></tr></thead>
+    <tbody>${rows.map(({s, i, m, st}) => {
+      const open = openToNation(s, p.nation);
+      return `<tr class="${m.eligible ? "" : "out"}">
+        <td><button type="button" class="linkbtn" data-act="detail" data-i="${i}">${esc(s.name)}</button><br><span class="meta">${esc(s.provider)}</span></td>
+        <td>${esc(s.country)}</td><td>${levelText(s)}</td>
+        <td>${s.funding === "full" ? "Full" : "Partial"}</td>
+        <td>${MONTHS[s.deadline - 1]}</td>
+        <td><span class="pill ${st.cls}">${st.label}</span></td>
+        <td><span class="pill ${open ? "ok" : "no"}">${open ? "✓ Yes" : "✕ No"}</span></td>
+        <td class="num">${m.eligible ? m.score : "–"}</td>
+        <td>${saveBtn(s, i)}</td>
+      </tr>`;}).join("")}</tbody></table>`;
+}
+
+function render(){
+  const {rows, p} = getRows();
+  const eligible = rows.filter(r => r.m.eligible).length;
+  $("summary").innerHTML = "<b>Matches for:</b> " + profileText(p);
+  $("count").textContent = eligible + " eligible of " + rows.length + " shown";
+  $("exampleTag").hidden = usedOwnProfile;
+  $("trackCount").textContent = Object.keys(track.saved).length;
+  $("sortBy").value = sortKey;
+  $("list").hidden = view !== "cards" && rows.length > 0;
+  $("tableWrap").hidden = view !== "table" || rows.length === 0;
+  $("moreBtn").hidden = true;
+  if(!rows.length){
+    $("list").innerHTML = `<div class="empty">${tab === "track"
+      ? "Your tracker is empty. Press Save on a scholarship to follow it here."
+      : "No scholarships match these filters. Clear the search or choose another region."}</div>`;
+    return;
+ }
+  if(view === "cards"){
+    $("list").innerHTML = rows.slice(0, limit).map(cardHTML).join("");
+    if(rows.length > limit){ $("moreBtn").hidden = false; $("moreBtn").textContent = "Show more (" + (rows.length - limit) + " left)";}
+ } else $("tableWrap").innerHTML = tableHTML(rows, p);
+}
+
+function openDetail(i){
+  const s = SCHOLARSHIPS[i], p = profile, m = matchScore(p, s), st = appStatus(s);
+  const lv = s.levels.includes(p.level) ? p.level : s.levels[0], docKey = s.name + "|" + lv;
+  const [label, color] = verdict(m), docs = docsFor(s, lv), ticked = track.docs[docKey] || [];
+  $("dTitle").textContent = s.name;
+  $("dBody").innerHTML = `
+    <p class="meta" style="margin:0">${esc(s.provider)} · ${esc(s.country)} · ${levelText(s)} · <span class="pill ${st.cls}">${st.label}</span></p>
+    <div>
+      <h3 style="color:${color}">${label}${m.eligible ? " · " + m.score + "/100" : ""}</h3>
+      <ul class="chips" style="margin:0">${chipsHTML(m)}</ul>
+    </div>
+    <div class="grid2">
+      <div><h3>Requirements for ${levelName(lv)} applicants</h3>
+        <ul><li>${esc(openLabel(s))}</li>
+        ${reqList(s, lv).map(x => `<li>${x}</li>`).join("")}
+        <li>Fields: ${s.fields.includes("any") ? "all fields" : esc(s.fields.join(", "))}</li>
+        ${s.note ? `<li>${esc(s.note)}</li>` : ""}</ul></div>
+      <div><h3>What it covers</h3><ul>${coverFor(s).map(c => `<li>${c}</li>`).join("")}</ul>
+        <h3 style="margin-top:12px">Dates</h3><ul><li>Opens around ${MONTHS[s.opens - 1]}</li><li>Deadline around ${MONTHS[s.deadline - 1]}</li></ul></div>
+    </div>
+    <div><h3>Application stages</h3><ol>${STAGES.map(x => `<li>${x}</li>`).join("")}</ol></div>
+    <div><h3>Document checklist <span class="meta" id="docCount">${ticked.length} of ${docs.length} ready</span></h3>
+      <ul class="docs">${docs.map((d, k) => `<li><label for="doc${k}"><input type="checkbox" id="doc${k}" data-doc="${k}" data-i="${i}" data-key="${esc(docKey)}"${ticked.includes(k) ? " checked" : ""}> ${d}</label></li>`).join("")}</ul></div>
+    <div class="cardacts">${saveBtn(s, i)} ${siteLink(s)}</div>`;
+  if($("detail").showModal && !$("detail").open) $("detail").showModal();
+}
+
+/* ---------- events ---------- */
+function handleAct(e){
+  const el = e.target.closest("[data-act],[data-sort]"); if(!el) return;
+  if(el.dataset.sort){
+    if(e.type !== "click") return;
+    if(sortKey === el.dataset.sort) sortDir = -sortDir; else { sortKey = el.dataset.sort; sortDir = 1;}
+    return render();
+ }
+  const i = +el.dataset.i, s = SCHOLARSHIPS[i];
+  if(el.dataset.act === "detail" && e.type === "click") return openDetail(i);
+  if(el.dataset.act === "save" && e.type === "click"){
+    if(track.saved[s.name]) delete track.saved[s.name]; else track.saved[s.name] = TRACK_STEPS[0];
+    saveTrack(); render(); if($("detail").open) openDetail(i);
+ }
+  if(el.dataset.act === "step" && e.type === "change"){ track.saved[s.name] = el.value; saveTrack();}
+}
+["list","tableWrap","dBody"].forEach(id => { $(id).addEventListener("click", handleAct); $(id).addEventListener("change", handleAct);});
+$("dBody").addEventListener("change", e => {
+  const el = e.target.closest("[data-doc]"); if(!el) return;
+  const key = el.dataset.key, k = +el.dataset.doc, set = new Set(track.docs[key] || []);
+  el.checked ? set.add(k) : set.delete(k);
+  track.docs[key] = [...set]; saveTrack();
+  $("docCount").textContent = set.size + " of " + $("dBody").querySelectorAll("[data-doc]").length + " ready";
+});
+$("dClose").addEventListener("click", () => $("detail").close());
+$("detail").addEventListener("click", e => { if(e.target === $("detail")) $("detail").close();});
+$("moreBtn").addEventListener("click", () => { limit += PAGE; render();});
+
+function press(onId, offId){ $(onId).setAttribute("aria-pressed","true"); $(offId).setAttribute("aria-pressed","false");}
+$("tabAll").addEventListener("click", () => { tab = "all"; limit = PAGE; press("tabAll","tabTrack"); render();});
+$("tabTrack").addEventListener("click", () => { tab = "track"; limit = PAGE; press("tabTrack","tabAll"); render();});
+$("viewCards").addEventListener("click", () => { view = "cards"; press("viewCards","viewTable"); render();});
+$("viewTable").addEventListener("click", () => { view = "table"; press("viewTable","viewCards"); render();});
+
+/* Profile: editing only marks it as changed; the button applies it. */
+$("profileForm").addEventListener("input", e => { if(e.target.id === "pLevel") syncLevel(); $("dirtyNote").hidden = false; });
+$("profileForm").addEventListener("submit", e => {
+  e.preventDefault();
+  profile = readForm(); usedOwnProfile = true; limit = PAGE; $("dirtyNote").hidden = true;
+  render();
+  const calm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if($("results").scrollIntoView) $("results").scrollIntoView({behavior:calm ? "auto" : "smooth", block:"start"});
+});
+$("resetBtn").addEventListener("click", () => {
+  $("profileForm").reset(); syncLevel(); profile = readForm(); usedOwnProfile = false; limit = PAGE; $("dirtyNote").hidden = true; render();
+});
+["q","fElig","fRegion","fCountry","fFunding","fStatus"].forEach(id => $(id).addEventListener("input", () => { limit = PAGE; render();}));
+$("sortBy").addEventListener("input", () => { sortKey = $("sortBy").value; sortDir = 1; render();});
+render();
+</script>
+</body>
+</html>
