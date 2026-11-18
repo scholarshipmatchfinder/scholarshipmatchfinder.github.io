@@ -142,6 +142,7 @@ dialog::backdrop{background:rgba(6,20,17,.55)}
 
 footer{max-width:1240px;margin:0 auto;padding:8px 20px 32px;font-size:13px;color:var(--muted)}
 </style>
+<script data-goatcounter="https://scholarshipmatchfinder.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
 <body>
 
@@ -1093,6 +1094,20 @@ $("resetBtn").addEventListener("click", () => {
 ["q","fElig","fRegion","fCountry","fFunding","fStatus"].forEach(id => $(id).addEventListener("input", () => { limit = PAGE; render();}));
 $("sortBy").addEventListener("input", () => { sortKey = $("sortBy").value; sortDir = 1; render();});
 render();
+
+/* Visitor analytics (GoatCounter): count the two key actions */
+function gcEvent(path, title){ try{ if(window.goatcounter && window.goatcounter.count) window.goatcounter.count({path, title, event:true}); }catch(e){} }
+document.getElementById("profileForm").addEventListener("submit", () => {
+  const n = (document.getElementById("pNation") || {}).value || "unknown";
+  gcEvent("find-matches", "Find my matches (" + n + ")");
+});
+document.addEventListener("click", e => {
+  const a = e.target.closest && e.target.closest("a.btn");
+  if(a && a.textContent.trim() === "Go to official page"){
+    const s = SCHOLARSHIPS.find(x => x.url === a.getAttribute("href"));
+    gcEvent("official-page", "Official page: " + (s ? s.name : a.href));
+  }
+});
 </script>
 </body>
 </html>
